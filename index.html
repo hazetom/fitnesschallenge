@@ -2,242 +2,131 @@
 <html lang="nl" class="h-full">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Challenge Tracker 2026</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#111827">
+
+    <title>Challenge 2026</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #111827; color: white; }
+        body { font-family: 'Inter', sans-serif; background-color: #111827; color: white; -webkit-tap-highlight-color: transparent; }
         .progress-ring__circle { transition: stroke-dashoffset 0.8s cubic-bezier(0.65, 0, 0.35, 1); transform: rotate(-90deg); transform-origin: 50% 50%; }
         .hide-scroll::-webkit-scrollbar { display: none; }
-        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        /* Confetti */
-        .confetti { position: absolute; width: 10px; height: 10px; background-color: #f00; animation: fall linear forwards; }
+        .confetti { position: absolute; width: 10px; height: 10px; animation: fall linear forwards; pointer-events: none; }
         @keyframes fall { to { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
+        /* Voorkom dat de UI verspringt op mobiel */
+        html, body { overflow-x: hidden; position: fixed; width: 100%; height: 100%; }
+        #app-container { overflow-y: auto; height: 100%; -webkit-overflow-scrolling: touch; }
     </style>
 </head>
-<body class="h-full flex flex-col hide-scroll overflow-y-auto">
+<body class="h-full">
 
-    <div id="confetti-container" class="fixed inset-0 pointer-events-none z-50 overflow-hidden"></div>
+    <div id="confetti-container" class="fixed inset-0 pointer-events-none z-50"></div>
 
-    <div id="app" class="p-6 max-w-5xl mx-auto w-full mb-24">
-        
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+    <div id="app-container" class="p-6 pb-32">
+        <header class="flex justify-between items-center mb-8">
             <div>
                 <h1 class="text-3xl font-black tracking-tight">Challenge 2026</h1>
-                <p class="text-gray-400">Jouw persoonlijke dashboard</p>
+                <p class="text-gray-400 text-sm">Dashboard</p>
             </div>
+            <button onclick="exportData()" class="text-xs bg-gray-800 text-gray-500 px-3 py-1 rounded-lg border border-gray-700">Backup</button>
+        </header>
+
+        <div id="dashboard-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             </div>
-
-        <div id="dashboard-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"></div>
-
-        <div id="detail-view" class="hidden fixed inset-0 bg-gray-900 z-40 overflow-y-auto hide-scroll">
-            <div id="detail-header" class="p-6 pt-8 rounded-b-3xl shadow-2xl relative transition-colors duration-300 bg-gray-800">
-                <button onclick="closeDetail()" class="absolute top-6 left-6 p-2 bg-black/20 hover:bg-black/40 rounded-full text-white backdrop-blur-md">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
-                </button>
-
-                <div class="text-center mt-2">
-                    <h2 id="detail-title" class="text-3xl font-bold text-white mb-6">Titel</h2>
-                    <div class="flex justify-center gap-12">
-                        <div class="text-center">
-                            <div class="flex items-baseline justify-center gap-1">
-                                <span id="detail-total" class="text-4xl font-black">0</span>
-                                <span id="detail-target" class="text-lg opacity-70 font-medium">/ 0</span>
-                            </div>
-                            <div class="text-xs uppercase tracking-widest opacity-60 font-bold mt-1">Jaartotaal</div>
-                        </div>
-                        <div class="text-center">
-                            <div id="detail-pct" class="text-4xl font-black">0%</div>
-                            <div class="text-xs uppercase tracking-widest opacity-60 font-bold mt-1">Voortgang</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="max-w-4xl mx-auto p-6 space-y-8">
-                <div>
-                    <h3 class="text-lg font-bold text-gray-300 mb-4">Maandoverzicht</h3>
-                    <div id="detail-month-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3"></div>
-                </div>
-                <div>
-                    <h3 class="text-lg font-bold text-gray-300 mb-4">Geschiedenis</h3>
-                    <ul id="detail-history" class="space-y-3"></ul>
-                </div>
-            </div>
-        </div>
     </div>
 
-    <div id="log-modal" class="hidden fixed inset-0 z-50 flex items-end md:items-center justify-center p-4">
-        <div onclick="toggleLogModal(false)" class="fixed inset-0 bg-black/80 backdrop-blur-sm"></div>
-        <div class="bg-gray-800 w-full max-w-md rounded-2xl shadow-2xl z-10 p-6 border border-gray-700">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold">Loggen</h2>
-                <button onclick="toggleLogModal(false)" class="text-gray-400 hover:text-white">✕</button>
-            </div>
-            
-            <div id="log-options-main" class="space-y-3">
-                <button onclick="addLog('12x12', 1)" class="w-full flex items-center p-4 bg-gray-700 hover:bg-teal-900/40 border border-transparent hover:border-teal-500 rounded-xl transition-all group">
-                    <span class="p-2 bg-gray-800 text-teal-400 rounded-lg mr-4 group-hover:bg-teal-500 group-hover:text-white">🏃</span>
-                    <span class="font-semibold">12 km-route</span>
-                </button>
-                <button onclick="addLog('kracht', 1)" class="w-full flex items-center p-4 bg-gray-700 hover:bg-orange-900/40 border border-transparent hover:border-orange-500 rounded-xl transition-all group">
-                    <span class="p-2 bg-gray-800 text-orange-400 rounded-lg mr-4 group-hover:bg-orange-500 group-hover:text-white">🏋️</span>
-                    <span class="font-semibold">Krachttraining</span>
-                </button>
-                <button onclick="addLog('yoga', 1)" class="w-full flex items-center p-4 bg-gray-700 hover:bg-purple-900/40 border border-transparent hover:border-purple-500 rounded-xl transition-all group">
-                    <span class="p-2 bg-gray-800 text-purple-400 rounded-lg mr-4 group-hover:bg-purple-500 group-hover:text-white">🧘</span>
-                    <span class="font-semibold">Yoga</span>
-                </button>
-                <button onclick="showWalkOptions()" class="w-full flex items-center p-4 bg-gray-700 hover:bg-blue-900/40 border border-transparent hover:border-blue-500 rounded-xl transition-all group">
-                    <span class="p-2 bg-gray-800 text-blue-400 rounded-lg mr-4 group-hover:bg-blue-500 group-hover:text-white">🚶</span>
-                    <span class="font-semibold">Wandelen...</span>
-                </button>
-            </div>
-
-            <div id="log-options-walk" class="hidden space-y-3">
-                <button onclick="addLog('wandelen_kort', 1)" class="w-full p-4 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold">Kort (+1)</button>
-                <button onclick="addLog('wandelen_medium', 2)" class="w-full p-4 bg-blue-700 hover:bg-blue-600 rounded-xl font-bold">Medium (+2)</button>
-                <button onclick="addLog('wandelen_lang', 3)" class="w-full p-4 bg-blue-800 hover:bg-blue-700 rounded-xl font-bold">Lang (+3)</button>
-                <button onclick="resetLogOptions()" class="w-full text-center text-sm text-gray-400 mt-2 hover:text-white">Terug</button>
-            </div>
-        </div>
-    </div>
-
-    <button onclick="toggleLogModal(true)" class="fixed bottom-8 right-8 bg-indigo-600 hover:bg-indigo-500 text-white p-4 rounded-full shadow-2xl z-30 transition-transform hover:scale-110">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-8 h-8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+    <button onclick="toggleLogModal(true)" class="fixed bottom-8 right-8 bg-indigo-600 w-16 h-16 rounded-full shadow-2xl z-30 flex items-center justify-center text-3xl font-bold">
+        +
     </button>
+
+    <div id="log-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div onclick="toggleLogModal(false)" class="fixed inset-0 bg-black/80 backdrop-blur-sm"></div>
+        <div class="bg-gray-800 w-full max-w-sm rounded-2xl p-6 border border-gray-700 relative z-10">
+            <h2 class="text-xl font-bold mb-4">Wat heb je gedaan?</h2>
+            <div class="grid grid-cols-1 gap-3">
+                <button onclick="addLog('12x12', 1)" class="p-4 bg-teal-900/30 border border-teal-500/50 rounded-xl text-left">🏃 12 km-route (+1)</button>
+                <button onclick="addLog('kracht', 1)" class="p-4 bg-orange-900/30 border border-orange-500/50 rounded-xl text-left">🏋️ Krachttraining (+1)</button>
+                <button onclick="addLog('yoga', 1)" class="p-4 bg-purple-900/30 border border-purple-500/50 rounded-xl text-left">🧘 Yoga (+1)</button>
+                <button onclick="addLog('wandelen', 2)" class="p-4 bg-blue-900/30 border border-blue-500/50 rounded-xl text-left">🚶 Wandelen (+2)</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         const CONFIG = {
-            '12x12': { title: 'Twaalf keer twaalf', target: 12, color: 'teal', icon: '🏃', qTarget: 3, mTarget: 1 },
-            'kracht': { title: 'Krachttraining', target: 80, color: 'orange', icon: '🏋️', qTarget: 20, mTarget: 7 },
-            'yoga': { title: 'Yoga', target: 40, color: 'purple', icon: '🧘', qTarget: 10, mTarget: 3 },
-            'wandelen': { title: 'Wandelpunten', target: 100, color: 'blue', icon: '🚶', qTarget: 25, mTarget: 9 }
+            '12x12': { title: 'Twaalf keer twaalf', target: 12, color: 'teal', icon: '🏃' },
+            'kracht': { title: 'Krachttraining', target: 80, color: 'orange', icon: '🏋️' },
+            'yoga': { title: 'Yoga', target: 40, color: 'purple', icon: '🧘' },
+            'wandelen': { title: 'Wandelpunten', target: 100, color: 'blue', icon: '🚶' }
         };
 
         let logs = JSON.parse(localStorage.getItem('logs_2026') || '[]');
-        let currentView = null;
 
-        const getDemoDate = () => {
-            const d = new Date();
-            d.setFullYear(2026);
-            return d;
-        };
-
-        const saveLogs = () => {
+        function save() {
             localStorage.setItem('logs_2026', JSON.stringify(logs));
-            renderDashboard();
-            if(currentView) renderDetail(currentView);
-        };
+            render();
+        }
 
-        const addLog = (type, points) => {
-            const date = getDemoDate().toISOString();
-            logs.unshift({ id: Date.now(), date, type, points });
-            saveLogs();
+        function addLog(type, points) {
+            logs.push({ type, points, date: new Date().toISOString() });
+            save();
             toggleLogModal(false);
             triggerConfetti();
-        };
+        }
 
-        const deleteLog = (id) => {
-            if(confirm('Verwijderen?')) {
-                logs = logs.filter(l => l.id != id);
-                saveLogs();
-            }
-        };
+        function toggleLogModal(show) {
+            document.getElementById('log-modal').classList.toggle('hidden', !show);
+        }
 
-        const getStats = (id) => {
-            const now = getDemoDate();
-            const currentMonth = now.getMonth();
-            const currentQ = Math.floor(currentMonth / 3);
-            const relLogs = logs.filter(l => l.type.startsWith(id));
-            const yearTotal = relLogs.reduce((acc, l) => acc + l.points, 0);
-            const qTotal = relLogs.filter(l => Math.floor(new Date(l.date).getMonth() / 3) === currentQ).reduce((acc, l) => acc + l.points, 0);
-            const mTotal = relLogs.filter(l => new Date(l.date).getMonth() === currentMonth).reduce((acc, l) => acc + l.points, 0);
-            return { yearTotal, qTotal, mTotal, ...CONFIG[id], currentMonth };
-        };
-
-        const renderDashboard = () => {
+        function render() {
             const grid = document.getElementById('dashboard-grid');
             grid.innerHTML = '';
+            
             Object.keys(CONFIG).forEach(key => {
-                const s = getStats(key);
-                const yearPct = Math.min(100, (s.yearTotal / s.target) * 100);
-                const colors = { teal: 'stroke-teal-500 bg-teal-500', orange: 'stroke-orange-500 bg-orange-500', purple: 'stroke-purple-500 bg-purple-500', blue: 'stroke-blue-500 bg-blue-500' };
-                const c = colors[s.color];
-
-                const card = document.createElement('div');
-                card.className = "bg-gray-800 p-5 rounded-2xl shadow-lg cursor-pointer hover:bg-gray-700 transition-all border border-gray-700";
-                card.onclick = () => renderDetail(key);
-                card.innerHTML = `
-                    <div class="flex items-center mb-4"><div class="text-2xl mr-3">${s.icon}</div><span class="text-lg font-bold">${s.title}</span></div>
-                    <div class="relative flex items-center justify-center w-32 h-32 mx-auto my-4">
-                        <svg class="w-full h-full" viewBox="0 0 100 100">
-                            <circle class="text-gray-700" stroke-width="8" stroke="currentColor" fill="transparent" r="45" cx="50" cy="50" />
-                            <circle class="progress-ring__circle ${c.split(' ')[0]}" stroke-width="8" stroke-linecap="round" stroke="currentColor" fill="transparent" r="45" cx="50" cy="50" style="stroke-dasharray: 282.7; stroke-dashoffset: ${282.7 - (282.7 * yearPct) / 100}" />
-                        </svg>
-                        <div class="absolute flex flex-col items-center"><span class="text-2xl font-black">${s.yearTotal}</span><span class="text-xs text-gray-400">/ ${s.target}</span></div>
+                const s = CONFIG[key];
+                const total = logs.filter(l => l.type === key).reduce((acc, l) => acc + l.points, 0);
+                const pct = Math.min(100, (total / s.target) * 100);
+                
+                grid.innerHTML += `
+                    <div class="bg-gray-800 p-5 rounded-2xl border border-gray-700 shadow-xl">
+                        <div class="flex items-center gap-3 mb-4">
+                            <span class="text-2xl">${s.icon}</span>
+                            <span class="font-bold text-gray-200">${s.title}</span>
+                        </div>
+                        <div class="text-4xl font-black mb-1">${total} <span class="text-sm text-gray-500 font-normal">/ ${s.target}</span></div>
+                        <div class="w-full bg-gray-900 h-3 rounded-full overflow-hidden">
+                            <div class="h-full bg-indigo-500 rounded-full transition-all duration-1000" style="width: ${pct}%"></div>
+                        </div>
                     </div>
                 `;
-                grid.appendChild(card);
             });
-        };
+        }
 
-        const renderDetail = (id) => {
-            currentView = id;
-            const s = getStats(id);
-            const header = document.getElementById('detail-header');
-            const bgColors = { teal: 'bg-teal-900', orange: 'bg-orange-900', purple: 'bg-purple-900', blue: 'bg-blue-900' };
-            header.className = `p-6 pt-8 rounded-b-3xl shadow-2xl relative transition-colors duration-300 ${bgColors[s.color] || 'bg-gray-800'}`;
-
-            document.getElementById('detail-title').innerText = s.title;
-            document.getElementById('detail-total').innerText = s.yearTotal;
-            document.getElementById('detail-target').innerText = `/ ${s.target}`;
-            document.getElementById('detail-pct').innerText = Math.round((s.yearTotal/s.target)*100) + '%';
-
-            const grid = document.getElementById('detail-month-grid');
-            grid.innerHTML = '';
-            const months = ["Jan", "Feb", "Mrt", "Apr", "Mei", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"];
-            months.forEach((m, idx) => {
-                const total = logs.filter(l => l.type.startsWith(id) && new Date(l.date).getMonth() === idx).reduce((acc, l) => acc + l.points, 0);
-                const isPast = idx <= s.currentMonth;
-                let tileClass = "bg-gray-800 text-gray-500";
-                if (isPast) {
-                    if (total >= s.mTarget) tileClass = `bg-${s.color}-600 text-white font-bold`;
-                    else if (idx < s.currentMonth) tileClass = "bg-red-900/50 text-white";
-                    else tileClass = "bg-gray-700 text-white";
-                }
-                grid.innerHTML += `<div class="flex flex-col items-center justify-center p-2 rounded-xl ${tileClass}"><span class="text-xs uppercase">${m}</span><span class="text-lg font-bold">${total}</span></div>`;
-            });
-
-            const hist = document.getElementById('detail-history');
-            hist.innerHTML = '';
-            logs.filter(l => l.type.startsWith(id)).forEach(l => {
-                hist.innerHTML += `<li class="flex justify-between items-center p-4 bg-gray-800 rounded-xl"><div><div class="font-medium">${new Date(l.date).toLocaleDateString()}</div><div class="text-xs text-gray-400">+${l.points} punt(en)</div></div><button onclick="deleteLog(${l.id})" class="text-gray-400 hover:text-red-400">🗑️</button></li>`;
-            });
-            document.getElementById('detail-view').classList.remove('hidden');
-        };
-
-        const closeDetail = () => { currentView = null; document.getElementById('detail-view').classList.add('hidden'); };
-        const toggleLogModal = (show) => { document.getElementById('log-modal').classList.toggle('hidden', !show); resetLogOptions(); };
-        const showWalkOptions = () => { document.getElementById('log-options-main').classList.add('hidden'); document.getElementById('log-options-walk').classList.remove('hidden'); };
-        const resetLogOptions = () => { document.getElementById('log-options-main').classList.remove('hidden'); document.getElementById('log-options-walk').classList.add('hidden'); };
-
-        const triggerConfetti = () => {
-            const c = document.getElementById('confetti-container');
+        function triggerConfetti() {
+            const container = document.getElementById('confetti-container');
             for(let i=0; i<30; i++) {
                 const el = document.createElement('div');
                 el.className = 'confetti';
-                el.style.left = Math.random()*100 + 'vw';
-                el.style.backgroundColor = ['#4ade80', '#fbbf24', '#f87171', '#818cf8'][Math.floor(Math.random()*4)];
-                el.style.animationDuration = (Math.random()*3 + 2) + 's';
-                c.appendChild(el);
-                setTimeout(() => el.remove(), 5000);
+                el.style.left = Math.random() * 100 + 'vw';
+                el.style.backgroundColor = ['#818cf8', '#6366f1', '#4f46e5'][Math.floor(Math.random()*3)];
+                el.style.animationDuration = (Math.random() * 2 + 1) + 's';
+                container.appendChild(el);
+                setTimeout(() => el.remove(), 2000);
             }
-        };
+        }
 
-        renderDashboard();
+        function exportData() {
+            const data = JSON.stringify(logs);
+            prompt("Kopieer je backup data:", data);
+        }
+
+        render();
     </script>
 </body>
 </html>
