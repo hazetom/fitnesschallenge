@@ -1,2 +1,2 @@
 # fitnesschallenge
-Fitness Challange 2026
+Fitness Challenge 2026
